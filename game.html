@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Probability & Calculus Adventure</title>
+<style>
+  body {
+    font-family: 'Arial', sans-serif;
+    background: linear-gradient(135deg, #74ebd5 0%, #ACB6E5 100%);
+    margin: 0;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  h1 {
+    font-size: 2em;
+    margin: 10px 0;
+    text-align: center;
+  }
+
+  #gameContainer {
+    background: #fff;
+    border-radius: 15px;
+    padding: 20px;
+    width: 95%;
+    max-width: 600px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  #progressContainer {
+    width: 100%;
+    height: 20px;
+    background-color: #eee;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+
+  #progressBar {
+    height: 100%;
+    width: 0%;
+    background-color: #4caf50;
+    transition: width 0.3s;
+  }
+
+  #mascot {
+    width: 80px;
+    height: 80px;
+    margin: 10px 0;
+  }
+
+  #questionArea {
+    font-size: 1.2em;
+    margin: 15px 0;
+    text-align: center;
+  }
+
+  input[type="text"] {
+    padding: 10px;
+    font-size: 1em;
+    width: 80%;
+    max-width: 300px;
+    border-radius: 8px;
+    border: 2px solid #555;
+  }
+
+  #buttons {
+    margin-top: 15px;
+  }
+
+  button {
+    background-color: #4CAF50;
+    color: white;
+    padding: 12px 20px;
+    margin: 10px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1em;
+    cursor: pointer;
+    transition: background 0.3s, transform 0.2s;
+  }
+
+  button:hover {
+    background-color: #45a049;
+    transform: scale(1.05);
+  }
+
+  #feedback {
+    margin-top: 20px;
+    font-size: 1.2em;
+    min-height: 1.2em;
+    text-align: center;
+  }
+
+  #diceContainer {
+    margin-top: 30px;
+  }
+
+  #dice {
+    font-size: 3em;
+    display: inline-block;
+    width: 60px;
+    height: 60px;
+    line-height: 60px;
+    border-radius: 10px;
+    background-color: #ffcc00;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  }
+
+  /* Animation for dice roll */
+  @keyframes rollDice {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  #dice.animate {
+    animation: rollDice 1s linear forwards;
+  }
+
+  /* Responsive font size for smaller screens */
+  @media(max-width: 500px){
+    body { font-size: 14px; }
+    #questionArea { font-size: 1em; }
+    button { padding: 10px 16px; font-size: 0.9em; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Probability & Calculus Adventure</h1>
+<div id="gameContainer">
+  <!-- Progress Bar -->
+  <div id="progressContainer">
+    <div id="progressBar"></div>
+  </div>
+
+  <!-- Mascot -->
+  <img src="https://i.imgur.com/6X7F5vT.png" alt="Mascot" id="mascot" />
+
+  <!-- Question -->
+  <div id="questionArea">Loading question...</div>
+
+  <!-- Answer Input -->
+  <input type="text" id="answerInput" placeholder="Your answer here" />
+
+  <!-- Buttons -->
+  <div id="buttons">
+    <button id="submitBtn" onclick="checkAnswer()">Submit Answer</button>
+    <button id="nextBtn" style="display:none;" onclick="nextQuestion()">Next Question</button>
+  </div>
+
+  <!-- Feedback -->
+  <div id="feedback"></div>
+
+  <!-- Dice with animation -->
+  <div id="diceContainer">
+    <div id="dice">🎲</div>
+  </div>
+</div>
+
+<!-- Sound effects -->
+<audio id="soundCorrect" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto"></audio>
+<audio id="soundWrong" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto"></audio>
+<audio id="soundDice" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto"></audio>
+
+<script>
+  const questions = [
+    {
+      question: "If you flip a fair coin 3 times, what is the probability of getting exactly 2 heads? (Enter as decimal)",
+      answer: 3 * (0.5 ** 3)
+    },
+    {
+      question: "Find the derivative of f(x) = 3x^2. (Enter as expression, e.g., 6x)",
+      answer: "6x"
+    },
+    {
+      question: "Given the density function f(x) = 3x^2 for x in [0,1], calculate P(X > 0.5). (Enter as decimal)",
+      answer: 1 - (0.5 ** 3)
+    }
+  ];
+
+  let currentQuestion = 0;
+  let score = 0;
+
+  const questionArea = document.getElementById('questionArea');
+  const feedback = document.getElementById('feedback');
+  const answerInput = document.getElementById('answerInput');
+  const submitBtn = document.getElementById('submitBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const progressBar = document.getElementById('progressBar');
+  const dice = document.getElementById('dice');
+
+  const soundCorrect = document.getElementById('soundCorrect');
+  const soundWrong = document.getElementById('soundWrong');
+
+  function showQuestion() {
+    feedback.innerHTML = "";
+    nextBtn.style.display = "none";
+    answerInput.value = "";
+    const q = questions[currentQuestion];
+    questionArea.innerHTML = `<strong>Question:</strong> ${q.question}`;
+    updateProgress();
+  }
+
+  function updateProgress() {
+    const percent = ((currentQuestion) / questions.length) * 100;
+    progressBar.style.width = percent + "%";
+  }
+
+  function checkAnswer() {
+    const userAnswer = answerInput.value.trim();
+    const correctAnswer = questions[currentQuestion].answer;
+    let isCorrect = false;
+
+    if (typeof correctAnswer === "number") {
+      const numAnswer = parseFloat(userAnswer);
+      if (!isNaN(numAnswer) && Math.abs(numAnswer - correctAnswer) < 0.01) {
+        isCorrect = true;
+      }
+    } else {
+      if (userAnswer.replace(/\s+/g, '') === correctAnswer) {
+        isCorrect = true;
+      }
+    }
+
+    if (isCorrect) {
+      feedback.innerHTML = "🎉 Correct!";
+      soundCorrect.play();
+      score++;
+      rollDice(true);
+    } else {
+      feedback.innerHTML = `❌ Incorrect. The correct answer is ${correctAnswer}.`;
+      soundWrong.play();
+      rollDice(false);
+    }
+    submitBtn.style.display = "none";
+    nextBtn.style.display = "inline-block";
+    updateProgress();
+  }
+
+  function nextQuestion() {
+    currentQuestion++;
+    if (currentQuestion < questions.length) {
+      showQuestion();
+      submitBtn.style.display = "inline-block";
+    } else {
+      showResults();
+    }
+  }
+
+  function showResults() {
+    questionArea.innerHTML = `<h2>Game Over!</h2><p>Your score: ${score}/${questions.length}</p>`;
+    feedback.innerHTML = `Thanks for playing!`;
+    document.getElementById('diceContainer').style.display = 'none';
+    document.querySelector('#submitBtn').style.display = 'none';
+    document.querySelector('#nextBtn').style.display = 'none';
+    document.getElementById('progressContainer').style.display = 'none';
+  }
+
+  function rollDice(isCorrect) {
+    // Animate dice
+    dice.classList.remove('animate');
+    void dice.offsetWidth; // trigger reflow
+    dice.classList.add('animate');
+
+    // Show emojis based on correctness
+    if (isCorrect) {
+      dice.innerHTML = '🎉';
+    } else {
+      dice.innerHTML = '💀';
+    }
+    // Play a sound for dice
+    document.getElementById('soundDice').play();
+  }
+
+  // Initialize game
+  window.onload = () => {
+    showQuestion();
+  };
+</script>
+</body>
+</html>
